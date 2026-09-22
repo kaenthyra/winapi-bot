@@ -17,13 +17,25 @@ int wmain() {
 	if (!lastSlash) return 1;
 	lastSlash[1] = L'\0';
 	wcscat_s(exePath, MAX_PATH, L"token.txt");
-	PrintLine(exePath);
 	HANDLE hTokenFile = CreateFileW(exePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hTokenFile == INVALID_HANDLE_VALUE) {
 		PrintLine(L"Не удалось открыть token.txt");
 		return 1;
 	}
 	PrintLine(L"Файл token.txt открыт");
+	char buffer[256];
+	DWORD written{};
+	if (!ReadFile(hTokenFile, buffer, 255, &written, NULL)) {
+		CloseHandle(hTokenFile);
+		return 1;
+	}
+	if (written == 0) {
+		PrintLine(L"token.txt пустой");
+		CloseHandle(hTokenFile);
+		return 1;
+	}
+	buffer[written] = '\0';
+	PrintLine(L"Токен прочитан");
 	CloseHandle(hTokenFile);
 	return 0;
 }
