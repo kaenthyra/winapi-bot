@@ -17,6 +17,10 @@ bool PrintLine(const wchar_t* text) {
 	return true;
 }
 
+bool IsSecretChar(char c) {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '-') || (c == '_');
+}
+
 int wmain() {
 	wchar_t exePath[MAX_PATH];
 	if (!GetModuleFileNameW(NULL, exePath, MAX_PATH)) {
@@ -66,6 +70,16 @@ int wmain() {
 			return 1;
 		}
 	}
-	PrintLine(L"Токен прочитан");
+	int secretLength = written - colonIndex - 1;
+	if (secretLength < 30) {
+		PrintLine(L"Неверная длина токена");
+		return 1;
+	}
+	for (int i = (colonIndex + 1); i < written; ++i) {
+		if (!IsSecretChar(buffer[i])) {
+			return 1;
+		}
+	}
+	PrintLine(L"Токен прочитан"); 
 	return 0;
 }
