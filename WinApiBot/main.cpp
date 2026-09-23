@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <cwchar>
+#include <cstring>
 
 bool PrintLine(const wchar_t* text) {
 	HANDLE hDescriptor = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -33,10 +34,12 @@ int wmain() {
 		return 1;
 	}
 	PrintLine(L"Файл token.txt открыт");
-	char buffer[256];
+	char buffer[256]{};
 	DWORD written{};
-	if (!ReadFile(hTokenFile, buffer, 255, &written, NULL)) {
-		CloseHandle(hTokenFile);
+	BOOL isRead = ReadFile(hTokenFile, buffer, 255, &written, NULL);
+	CloseHandle(hTokenFile);
+	if (!isRead) {
+		PrintLine(L"Не удалось прочитать токен");
 		return 1;
 	}
 	while (written > 0 && (buffer[written - 1] == '\r' || buffer[written - 1] == '\n' || buffer[written - 1] == '\t' || buffer[written - 1] == ' ')) {
@@ -44,11 +47,25 @@ int wmain() {
 	}
 	if (written == 0) {
 		PrintLine(L"token.txt пустой");
-		CloseHandle(hTokenFile);
 		return 1;
 	}
 	buffer[written] = '\0';
+	char* colon = strchr(buffer, ':');
+	if (!colon) {
+		PrintLine(L"Неверный формат токена, нет двоеточия");
+		return 1;
+	}
+	int colonIndex = colon - buffer;
+	if (colonIndex == 0) {
+		PrintLine(L"Неверный формат токена, перед двоеточием пусто");
+		return 1;
+	}
+	for (int i = 0; i < colonIndex; ++i) {
+		if (!(buffer[i] >= '0' && buffer[i] <= '9')) {
+			PrintLine(L"Неверный формат токена, ID бота должен состоять только из цифр");
+			return 1;
+		}
+	}
 	PrintLine(L"Токен прочитан");
-	CloseHandle(hTokenFile);
 	return 0;
 }
