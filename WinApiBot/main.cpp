@@ -77,6 +77,7 @@ int wmain() {
 	}
 	for (int i = (colonIndex + 1); i < written; ++i) {
 		if (!IsSecretChar(buffer[i])) {
+			PrintLine(L"Неверная секретная часть токена");
 			return 1;
 		}
 	}
