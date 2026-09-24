@@ -21,65 +21,75 @@ bool IsSecretChar(char c) {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '-') || (c == '_');
 }
 
-int wmain() {
+bool LoadToken(char* token, int tokenSize) {
 	wchar_t exePath[MAX_PATH];
 	if (!GetModuleFileNameW(NULL, exePath, MAX_PATH)) {
-		return 1;
+		return false;
 	}
 	wchar_t* lastSlash = wcsrchr(exePath, L'\\');
 	if (!lastSlash) {
-		return 1;
+		return false;
 	}
 	lastSlash[1] = L'\0';
 	wcscat_s(exePath, MAX_PATH, L"token.txt");
 	HANDLE hTokenFile = CreateFileW(exePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hTokenFile == INVALID_HANDLE_VALUE) {
 		PrintLine(L"Не удалось открыть token.txt");
-		return 1;
+		return false;
 	}
 	PrintLine(L"Файл token.txt открыт");
-	char buffer[256]{};
 	DWORD written{};
-	BOOL isRead = ReadFile(hTokenFile, buffer, 255, &written, NULL);
+	BOOL isRead = ReadFile(hTokenFile, token, tokenSize - 1, &written, NULL);
 	CloseHandle(hTokenFile);
 	if (!isRead) {
 		PrintLine(L"Не удалось прочитать токен");
-		return 1;
+		return false;
 	}
-	while (written > 0 && (buffer[written - 1] == '\r' || buffer[written - 1] == '\n' || buffer[written - 1] == '\t' || buffer[written - 1] == ' ')) {
+	while (written > 0 && (token[written - 1] == '\r' || token[written - 1] == '\n' || token[written - 1] == '\t' || token[written - 1] == ' ')) {
 		--written;
 	}
 	if (written == 0) {
 		PrintLine(L"token.txt пустой");
-		return 1;
+		return false;
 	}
-	buffer[written] = '\0';
-	char* colon = strchr(buffer, ':');
+	token[written] = '\0';
+	char* colon = strchr(token, ':');
 	if (!colon) {
 		PrintLine(L"Неверный формат токена, нет двоеточия");
-		return 1;
+		return false;
 	}
-	int colonIndex = colon - buffer;
+	int colonIndex = colon - token;
 	if (colonIndex == 0) {
 		PrintLine(L"Неверный формат токена, перед двоеточием пусто");
-		return 1;
+		return false;
 	}
 	for (int i = 0; i < colonIndex; ++i) {
-		if (!(buffer[i] >= '0' && buffer[i] <= '9')) {
+		if (!(token[i] >= '0' && token[i] <= '9')) {
 			PrintLine(L"Неверный формат токена, ID бота должен состоять только из цифр");
-			return 1;
+			return false;
 		}
 	}
 	int secretLength = written - colonIndex - 1;
 	if (secretLength < 30) {
 		PrintLine(L"Неверная длина токена");
-		return 1;
+		return false;
 	}
-	for (int i = (colonIndex + 1); i < written; ++i) {
-		if (!IsSecretChar(buffer[i])) {
+	for (DWORD i = (colonIndex + 1); i < written; ++i) {
+		// Ложная тревога анализатора кода
+		// Этот цикл не выходит за written
+		#pragma warning(suppress: 6385)
+		if (!IsSecretChar(token[i])) {
 			PrintLine(L"Неверная секретная часть токена");
-			return 1;
+			return false;
 		}
+	}
+	return true;
+}
+
+int wmain() {
+	char token[256]{};
+	if (!LoadToken(token, sizeof(token))) {
+		return 1;
 	}
 	PrintLine(L"Токен прочитан"); 
 	return 0;
